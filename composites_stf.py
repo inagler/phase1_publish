@@ -11,9 +11,22 @@ import gsw
 
 path = '/Data/skd/scratch/innag3580/comp/composites/'
 
-ds_temp = xr.open_dataset(path + 'Below_combined_TEMP_3.0_40_20.nc')
-ds_salt = xr.open_dataset(path + 'Below_combined_SALT_3.0_40_20.nc')
-ds_vvel = xr.open_dataset(path + 'Below_combined_VVEL_3.0_40_20.nc')
+# 'aa_hist', 'ghg_hist', 'early_hist', 'late_hist', 'above'
+period = 'above'
+
+if period == 'ghg_hist':
+    ds_temp = xr.open_dataset(path + 'Below_combined_TEMP_3.0_40_20.nc')
+    ds_salt = xr.open_dataset(path + 'Below_combined_SALT_3.0_40_20.nc')
+    ds_vvel = xr.open_dataset(path + 'Below_combined_VVEL_3.0_40_20.nc')
+elif perod == 'above':
+    ds_temp = xr.open_dataset(path + 'Above_combined_TEMP_3.0_40_20.nc')
+    ds_salt = xr.open_dataset(path + 'Above_combined_SALT_3.0_40_20.nc')
+    ds_vvel = xr.open_dataset(path + 'Above_combined_VVEL_3.0_40_20.nc')
+    
+    ds_temp = ds_temp.isel(time=slice(0,3))
+    ds_salt = ds_salt.isel(time=slice(0,3))
+    ds_vvel = ds_vvel.isel(time=slice(0,3))
+    
 
 CT = gsw.conversions.CT_from_pt(ds_salt['SALT'], ds_temp['TEMP'])
 sigma2 = gsw.density.sigma2(ds_salt['SALT'], CT)
@@ -58,21 +71,43 @@ def calculate_smoc(ds_vvel, ds_dens, density_bins):
         
     return overturning_dataarray
 
+
+
 da_smoc = calculate_smoc(ds_vvel, ds_dens, density_bins)
+ds_smoc = da_smoc.rename({'__xarray_dataarray_variable__': 'sMOC'})
+
+ds_keep = ds_dens.isel(nlon=0).squeeze()
+ds_smoc = ds_smoc.assign_coords(TLAT=ds_keep.TLAT)
+replacement_value = 0
+ds_smoc['TLAT'] = xr.where(
+    np.logical_or(np.isnan(ds_smoc['TLAT']), np.isinf(ds_smoc['TLAT']) | np.ma.getmask(ds_smoc['TLAT'])),
+    replacement_value,
+    ds_smoc['TLAT'])
 
 print('smoc computed')
 
 da_dmoc = (ds_vvel.VVEL * ds_vvel.dz * ds_vvel.DXU).sum(dim='nlon').cumsum(dim='z_t')
 
+ds_dmoc = ds_dmoc.rename({'__xarray_dataarray_variable__': 'dMOC'})
+ds_dmoc = ds_dmoc.assign_coords(TLAT=ds_smoc.TLAT)
+
 print('smoc computed')
 
 da_bsf = (ds_vvel.VVEL * ds_vvel.dz * ds_vvel.DXU).sum(dim='z_t').cumsum(dim='nlon')
 
+ds_bsf = ds_bsf.rename({'__xarray_dataarray_variable__': 'BSF'})
+ds_bsf = ds_bsf.assign_coords(TLAT=ds_bsf.TLAT)
+
 print('smoc computed')
 
-da_smoc.to_netcdf(os.path.join(path, f'Below_combined_smoc_3.0_40_20_ghg_hist.nc'))
-da_dmoc.to_netcdf(os.path.join(path, f'Below_combined_dmoc_3.0_40_20_ghg_hist.nc'))
-da_bsf.to_netcdf(os.path.join(path, f'Below_combined_bsf_3.0_40_20_ghg_hist.nc'))
+if period == 'ghg_hist':
+    da_smoc.to_netcdf(os.path.join(path, f'Below_combined_smoc_3.0_40_20_ghg_hist.nc'))
+    da_dmoc.to_netcdf(os.path.join(path, f'Below_combined_dmoc_3.0_40_20_ghg_hist.nc'))
+    da_bsf.to_netcdf(os.path.join(path, f'Below_combined_bsf_3.0_40_20_ghg_hist.nc'))
+elif perod == 'above':
+    da_smoc.to_netcdf(os.path.join(path, f'Above_combined_smoc_3.0_40_20.nc'))
+    da_dmoc.to_netcdf(os.path.join(path, f'Above_combined_dmoc_3.0_40_20.nc'))
+    da_bsf.to_netcdf(os.path.join(path, f'Above_combined_bsf_3.0_40_20.nc'))
 
 print('das saved')
 

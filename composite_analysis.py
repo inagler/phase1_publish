@@ -111,7 +111,8 @@ def prepare_ds_member(var, member_id, period):
     ds_member[var] = ds_member[var].astype('float32')
     ds_member = ds_member.sel(time=ds_member['time.month'].isin([12, 1, 2, 3]))
     ds_member = DJFM_average(ds_member)
-    #ds_member = ds_member.roll(nlon=-100).where(NA_mask == 1)
+    if var != 'N_HEAT':
+        ds_member = ds_member.roll(nlon=-100).where(NA_mask == 1)
     return ds_member   
 
 def extract_composite(ds_member, time_slice, index):
