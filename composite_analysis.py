@@ -72,6 +72,9 @@ def prepare_ds_member(var, member_id, period):
             os.path.join(base_path, var, f'*{member_id}*.{var}.201001-201412.nc')
         ]
     elif period == 'early_hist':
+        
+        print('yay early_hist')
+        
         file_patterns = [
             os.path.join(base_path, var, f'*{member_id}*.{var}.185001-185912.nc'),
             os.path.join(base_path, var, f'*{member_id}*.{var}.186001-186912.nc'),
@@ -135,6 +138,7 @@ def process_member(member, group_data, var, period):
         else:     
             time_slice = slice(period_start, period_end)
         extract_composite(ds_member, time_slice, index)
+    print('member evaluated')
 
 def combine_and_cleanup(split_idx, var):
     file_paths = glob.glob(os.path.join(temporary_path, f'{threshold_multiple}_{P1_len}_{P2_len}_*.nc'))
@@ -246,6 +250,9 @@ def main():
 
     # Process each split with an index
     for split_idx, split in enumerate(splits):
+        
+        print(split_idx, ' \ ', split_number)
+        
         grouped = split.groupby('Member')
         #tasks = [dask.delayed(process_member)(member, group_data, var, period) for member, group_data in grouped]
         tasks = [dask.delayed(process_member)(member, group_data, var, period) for member, group_data in grouped
